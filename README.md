@@ -1,5 +1,7 @@
 # gsc-mcp
 
+[English](README.md) | [한국어](README.ko.md)
+
 MCP server for **Google Search Console API** and **Google Indexing API** — full API coverage.
 
 Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server exposes **every endpoint** available in the Google Search Console and Indexing APIs.
@@ -49,7 +51,7 @@ Two authentication methods are supported:
   "mcpServers": {
     "gsc-mcp": {
       "command": "npx",
-      "args": ["-y", "gsc-mcp"],
+      "args": ["-y", "@mikusnuz/gsc-mcp"],
       "env": {
         "GSC_CLIENT_ID": "your-client-id",
         "GSC_CLIENT_SECRET": "your-client-secret",
@@ -71,7 +73,7 @@ Required OAuth2 scopes:
   "mcpServers": {
     "gsc-mcp": {
       "command": "npx",
-      "args": ["-y", "gsc-mcp"],
+      "args": ["-y", "@mikusnuz/gsc-mcp"],
       "env": {
         "GSC_SERVICE_ACCOUNT_KEY_PATH": "/path/to/service-account-key.json"
       }
