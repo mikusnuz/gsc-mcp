@@ -2,6 +2,8 @@
 
 [English](README.md) | [한국어](README.ko.md)
 
+[![MCP Badge](https://lobehub.com/badge/mcp/mikusnuz-gsc-mcp)](https://lobehub.com/mcp/mikusnuz-gsc-mcp)
+
 MCP server for **Google Search Console API** and **Google Indexing API** — full API coverage.
 
 Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server exposes **every endpoint** available in the Google Search Console and Indexing APIs.
