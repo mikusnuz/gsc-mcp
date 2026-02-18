@@ -581,6 +581,134 @@ server.tool(
   },
 );
 
+// ════════════════════════════════════════════
+// PROMPTS
+// ════════════════════════════════════════════
+
+server.prompt(
+  "seo_audit",
+  "Run an SEO audit for a site — checks indexing status, sitemap health, and recent search performance.",
+  {
+    siteUrl: z
+      .string()
+      .describe(
+        "The site URL (e.g. 'https://example.com/' or 'sc-domain:example.com')",
+      ),
+  },
+  ({ siteUrl }) => ({
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: [
+            `Perform a comprehensive SEO audit for ${siteUrl}. Follow these steps:`,
+            "",
+            "1. Use sites_get to check the site's verification status",
+            "2. Use sitemaps_list to check submitted sitemaps",
+            "3. Use search_analytics_query with dimensions=['date'] for the last 28 days to get traffic trends",
+            "4. Use search_analytics_query with dimensions=['page'] and rowLimit=10 to find top pages",
+            "5. Use search_analytics_query with dimensions=['query'] and rowLimit=10 to find top queries",
+            "",
+            "Summarize findings including:",
+            "- Site verification status",
+            "- Sitemap health (count, errors, last submitted)",
+            "- Traffic overview (total clicks, impressions, avg CTR, avg position)",
+            "- Traffic trend (up/down over 28 days)",
+            "- Top performing pages and queries",
+            "- Recommendations for improvement",
+          ].join("\n"),
+        },
+      },
+    ],
+  }),
+);
+
+server.prompt(
+  "index_url",
+  "Submit a URL to Google for indexing and verify its current index status.",
+  {
+    url: z.string().describe("The fully-qualified URL to index"),
+    siteUrl: z
+      .string()
+      .describe("The site URL this page belongs to"),
+  },
+  ({ url, siteUrl }) => ({
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: [
+            `Index the URL ${url} (site: ${siteUrl}). Follow these steps:`,
+            "",
+            "1. Use url_inspection_inspect to check the current index status",
+            "2. Use indexing_publish with type URL_UPDATED to request indexing",
+            "3. Use indexing_get_metadata to confirm the notification was received",
+            "",
+            "Report the results including current index status and notification confirmation.",
+          ].join("\n"),
+        },
+      },
+    ],
+  }),
+);
+
+// ════════════════════════════════════════════
+// RESOURCES
+// ════════════════════════════════════════════
+
+server.resource(
+  "sites",
+  "gsc://sites",
+  {
+    description:
+      "List of all verified sites (properties) in Google Search Console",
+    mimeType: "application/json",
+  },
+  async () => {
+    const result = await apiCall(`${WEBMASTERS_BASE}/sites`, {
+      method: "GET",
+    });
+    return {
+      contents: [
+        {
+          uri: "gsc://sites",
+          mimeType: "application/json",
+          text: result.body,
+        },
+      ],
+    };
+  },
+);
+
+server.resource(
+  "sitemaps",
+  "gsc://sitemaps/{siteUrl}",
+  {
+    description: "List of all sitemaps for a specific site",
+    mimeType: "application/json",
+  },
+  async (uri) => {
+    const siteUrl = decodeURIComponent(
+      uri.pathname.replace(/^\/\/sitemaps\//, ""),
+    );
+    const result = await apiCall(
+      `${WEBMASTERS_BASE}/sites/${encodeSiteUrl(siteUrl)}/sitemaps`,
+      { method: "GET" },
+    );
+    return {
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "application/json",
+          text: result.body,
+        },
+      ],
+    };
+  },
+);
+
 // ── Start ──
 
 async function main() {
