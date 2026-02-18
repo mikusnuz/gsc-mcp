@@ -2,6 +2,8 @@
 
 [English](README.md) | **한국어**
 
+[![MCP Badge](https://lobehub.com/badge/mcp/mikusnuz-gsc-mcp)](https://lobehub.com/mcp/mikusnuz-gsc-mcp)
+
 **Google Search Console API**와 **Google Indexing API**를 위한 MCP 서버 — 전체 API 커버리지 지원.
 
 다른 `searchAnalytics.query`만 래핑하는 GSC MCP 서버와 달리, 이 서버는 Google Search Console과 Indexing API의 **모든 엔드포인트**를 노출합니다.
