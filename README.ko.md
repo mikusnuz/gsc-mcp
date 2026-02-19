@@ -1,5 +1,7 @@
 # gsc-mcp
 
+[![npm version](https://img.shields.io/npm/v/@mikusnuz%2Fgsc-mcp)](https://www.npmjs.com/package/@mikusnuz/gsc-mcp)
+
 [English](README.md) | **한국어**
 
 [![MCP Badge](https://lobehub.com/badge/mcp/mikusnuz-gsc-mcp)](https://lobehub.com/mcp/mikusnuz-gsc-mcp)
