@@ -125,7 +125,7 @@ function errorResult(e: unknown) {
 
 const server = new McpServer({
   name: "gsc-mcp",
-  version: "1.0.0",
+  version: "1.3.0",
 });
 
 // ════════════════════════════════════════════
@@ -368,6 +368,7 @@ const dimensionEnum = z.enum([
   "query",
   "searchAppearance",
   "date",
+  "hour",
 ]);
 
 const filterOperatorEnum = z.enum([
@@ -381,7 +382,7 @@ const filterOperatorEnum = z.enum([
 
 const searchTypeEnum = z.enum(["web", "image", "video", "news", "discover", "googleNews"]);
 
-const dataStateEnum = z.enum(["all", "final"]);
+const dataStateEnum = z.enum(["all", "final", "hourly_all"]);
 
 const dimensionFilterGroupSchema = z.object({
   groupType: z.enum(["and"]).optional().describe("How filters are combined (only 'and' is supported)"),
@@ -414,7 +415,7 @@ server.tool(
       .array(dimensionEnum)
       .optional()
       .describe(
-        "Dimensions to group by: country, device, page, query, searchAppearance, date",
+        "Dimensions to group by: country, device, page, query, searchAppearance, date, hour (hour requires dataState='hourly_all')",
       ),
     type: searchTypeEnum
       .optional()
@@ -443,7 +444,7 @@ server.tool(
     dataState: dataStateEnum
       .optional()
       .describe(
-        "'all' includes fresh (possibly incomplete) data, 'final' only finalized data",
+        "'all' includes fresh (possibly incomplete) data, 'final' only finalized data, 'hourly_all' required when using 'hour' dimension",
       ),
   },
   async ({
@@ -575,6 +576,77 @@ server.tool(
         { method: "GET" },
       );
       return toolResult(result);
+    } catch (e) {
+      return errorResult(e);
+    }
+  },
+);
+
+// ── indexing_batch_publish ──
+server.tool(
+  "indexing_batch_publish",
+  "Batch notify Google about multiple URL updates or removals via the Indexing API. Combines up to 100 notifications into a single HTTP request for efficiency.",
+  {
+    notifications: z
+      .array(
+        z.object({
+          url: z.string().describe("The fully-qualified URL"),
+          type: z
+            .enum(["URL_UPDATED", "URL_DELETED"])
+            .describe("Notification type: URL_UPDATED or URL_DELETED"),
+        }),
+      )
+      .min(1)
+      .max(100)
+      .describe(
+        "Array of URL notifications (1-100 items). Each item has a url and type.",
+      ),
+  },
+  async ({ notifications }) => {
+    try {
+      const token = await getAccessToken();
+      const boundary = `batch_gsc_mcp_${Date.now()}`;
+
+      const parts = notifications.map((n, i) => {
+        const body = JSON.stringify({ url: n.url, type: n.type });
+        return [
+          `--${boundary}`,
+          "Content-Type: application/http",
+          "Content-Transfer-Encoding: binary",
+          `Content-ID: <item-${i + 1}>`,
+          "",
+          "POST /v3/urlNotifications:publish HTTP/1.1",
+          "Content-Type: application/json",
+          "accept: application/json",
+          `content-length: ${Buffer.byteLength(body)}`,
+          "",
+          body,
+        ].join("\r\n");
+      });
+
+      const batchBody = parts.join("\r\n") + `\r\n--${boundary}--`;
+
+      const res = await fetch("https://indexing.googleapis.com/batch", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `multipart/mixed; boundary=${boundary}`,
+        },
+        body: batchBody,
+      });
+
+      const responseText = await res.text();
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: res.ok
+              ? `Batch published ${notifications.length} URL(s) successfully.\n\n${responseText}`
+              : `Batch request failed (${res.status}):\n${responseText}`,
+          },
+        ],
+        isError: !res.ok,
+      };
     } catch (e) {
       return errorResult(e);
     }

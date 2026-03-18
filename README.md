@@ -10,7 +10,7 @@ MCP server for **Google Search Console API** and **Google Indexing API** — ful
 
 Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server exposes **every endpoint** available in the Google Search Console and Indexing APIs.
 
-## Tools (12)
+## Tools (13)
 
 ### Sites
 | Tool | Description |
@@ -31,7 +31,7 @@ Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server
 ### Search Analytics
 | Tool | Description |
 |------|-------------|
-| `search_analytics_query` | Query search performance data (clicks, impressions, CTR, position) with filtering and grouping |
+| `search_analytics_query` | Query search performance data (clicks, impressions, CTR, position) with filtering and grouping. Supports hourly data with the `hour` dimension. |
 
 ### URL Inspection
 | Tool | Description |
@@ -43,6 +43,7 @@ Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server
 |------|-------------|
 | `indexing_publish` | Notify Google about URL updates or removals |
 | `indexing_get_metadata` | Get latest notification status for a URL |
+| `indexing_batch_publish` | Batch notify Google about up to 100 URL updates/removals in a single request |
 
 ## Authentication
 

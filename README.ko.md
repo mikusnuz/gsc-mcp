@@ -10,7 +10,7 @@
 
 다른 `searchAnalytics.query`만 래핑하는 GSC MCP 서버와 달리, 이 서버는 Google Search Console과 Indexing API의 **모든 엔드포인트**를 노출합니다.
 
-## 도구 (12개)
+## 도구 (13개)
 
 ### Sites
 | Tool | 설명 |
@@ -31,7 +31,7 @@
 ### 검색 분석
 | Tool | 설명 |
 |------|------|
-| `search_analytics_query` | 검색 성과 데이터(클릭수, 노출수, CTR, 순위) 필터링 및 그룹화하여 쿼리 |
+| `search_analytics_query` | 검색 성과 데이터(클릭수, 노출수, CTR, 순위) 필터링 및 그룹화하여 쿼리. `hour` 차원으로 시간별 데이터 지원. |
 
 ### URL 검사
 | Tool | 설명 |
@@ -43,6 +43,7 @@
 |------|------|
 | `indexing_publish` | URL 업데이트 또는 제거에 대해 Google에 알림 |
 | `indexing_get_metadata` | URL의 최신 알림 상태 조회 |
+| `indexing_batch_publish` | 최대 100개의 URL 업데이트/제거를 단일 요청으로 일괄 알림 |
 
 ## 인증
 
