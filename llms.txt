@@ -1,0 +1,72 @@
+# gsc-mcp
+
+> MCP server for Google Search Console API, URL Inspection API, and Indexing API. Full API coverage — not just searchAnalytics.query.
+
+## Tools (13)
+
+### Sites
+- sites_list: List all sites (properties) in Search Console
+- sites_get: Get details of a specific site
+- sites_add: Add a new site (property)
+- sites_delete: Remove a site
+
+### Sitemaps
+- sitemaps_list: List all submitted sitemaps for a site
+- sitemaps_get: Get details of a specific sitemap
+- sitemaps_submit: Submit a sitemap
+- sitemaps_delete: Delete a sitemap
+
+### Search Analytics
+- search_analytics_query: Query search performance data (clicks, impressions, CTR, position) with filtering, grouping, and hourly dimension support
+
+### URL Inspection
+- url_inspection_inspect: Inspect a URL's index status, crawl info, rich results, AMP, and mobile usability
+
+### Indexing API
+- indexing_publish: Notify Google about URL updates or removals
+- indexing_get_metadata: Get latest notification status for a URL
+- indexing_batch_publish: Batch notify Google about up to 100 URL updates/removals in a single request
+
+## Install
+
+```
+npx -y @mikusnuz/gsc-mcp
+```
+
+## Environment Variables
+
+### Option A: OAuth2 Refresh Token
+- GSC_CLIENT_ID — Google OAuth2 client ID
+- GSC_CLIENT_SECRET — Google OAuth2 client secret
+- GSC_REFRESH_TOKEN — OAuth2 refresh token
+
+Required OAuth2 scopes:
+- https://www.googleapis.com/auth/webmasters
+- https://www.googleapis.com/auth/indexing
+
+### Option B: Service Account
+- GSC_SERVICE_ACCOUNT_KEY_PATH — path to service account JSON key file
+
+The service account must be added as an owner/user in Google Search Console.
+
+## MCP Config
+
+```json
+{
+  "mcpServers": {
+    "gsc-mcp": {
+      "command": "npx",
+      "args": ["-y", "@mikusnuz/gsc-mcp"],
+      "env": {
+        "GSC_CLIENT_ID": "your-client-id",
+        "GSC_CLIENT_SECRET": "your-client-secret",
+        "GSC_REFRESH_TOKEN": "your-refresh-token"
+      }
+    }
+  }
+}
+```
+
+## Links
+- npm: https://www.npmjs.com/package/@mikusnuz/gsc-mcp
+- GitHub: https://github.com/mikusnuz/gsc-mcp

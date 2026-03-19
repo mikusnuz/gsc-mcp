@@ -8,6 +8,20 @@
 
 MCP server for **Google Search Console API** and **Google Indexing API** — full API coverage.
 
+## When to Use
+
+| Task | Tool |
+|------|------|
+| "Check which queries my site ranks for" | `search_analytics_query` |
+| "Submit a URL for indexing" | `indexing_publish` |
+| "Find pages with indexing errors" | `url_inspection_inspect` |
+| "Get search performance data for the last 30 days" | `search_analytics_query` |
+| "Compare click-through rates between mobile and desktop" | `search_analytics_query` (group by `device`) |
+| "Submit my sitemap to Google" | `sitemaps_submit` |
+| "Batch submit URLs for indexing" | `indexing_batch_publish` |
+
+> **For AI agents:** See [`llms.txt`](llms.txt) for a machine-readable summary. Copy [`templates/CLAUDE.md`](templates/CLAUDE.md) or [`templates/AGENTS.md`](templates/AGENTS.md) into your project to teach your agent about this MCP.
+
 Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server exposes **every endpoint** available in the Google Search Console and Indexing APIs.
 
 ## Tools (13)
