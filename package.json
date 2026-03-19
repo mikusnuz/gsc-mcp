@@ -3,9 +3,18 @@
   "version": "1.3.1",
   "mcpName": "io.github.mikusnuz/gsc",
   "description": "MCP server for Google Search Console & Indexing API — full API coverage",
+  "type": "module",
   "main": "dist/index.js",
   "bin": {
     "gsc-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",
@@ -22,10 +31,15 @@
     "sitemaps",
     "url-inspection"
   ],
+  "author": "mikusnuz",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mikusnuz/gsc-mcp.git"
+    "url": "git+https://github.com/mikusnuz/gsc-mcp.git"
+  },
+  "homepage": "https://github.com/mikusnuz/gsc-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/mikusnuz/gsc-mcp/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
