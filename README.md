@@ -6,6 +6,8 @@
 
 [![MCP Badge](https://lobehub.com/badge/mcp/mikusnuz-gsc-mcp)](https://lobehub.com/mcp/mikusnuz-gsc-mcp)
 
+[![gsc-mcp MCP server](https://glama.ai/mcp/servers/mikusnuz/gsc-mcp/badges/card.svg)](https://glama.ai/mcp/servers/mikusnuz/gsc-mcp)
+
 MCP server for **Google Search Console API** and **Google Indexing API** — full API coverage.
 
 ## When to Use
