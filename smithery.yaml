@@ -1,0 +1,22 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      gscClientId:
+        type: string
+        description: Google OAuth2 Client ID
+      gscClientSecret:
+        type: string
+        description: Google OAuth2 Client Secret
+      gscRefreshToken:
+        type: string
+        description: Google OAuth2 Refresh Token
+      gscServiceAccountKeyPath:
+        type: string
+        description: Path to Google service account JSON key file (alternative to OAuth2)
+  commandFunction:
+    |-
+    config => ({ command: 'npx', args: ['-y', '@mikusnuz/gsc-mcp'], env: { GSC_CLIENT_ID: config.gscClientId || '', GSC_CLIENT_SECRET: config.gscClientSecret || '', GSC_REFRESH_TOKEN: config.gscRefreshToken || '', GSC_SERVICE_ACCOUNT_KEY_PATH: config.gscServiceAccountKeyPath || '' } })
