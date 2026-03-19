@@ -792,3 +792,111 @@ main().catch((err) => {
   process.stderr.write(`Fatal: ${err.message}\n`);
   process.exit(1);
 });
+
+// ── Smithery Sandbox ──
+
+export function createSandboxServer() {
+  const sandbox = new McpServer({
+    name: "gsc-mcp",
+    version: "1.3.0",
+  });
+
+  // Re-register all tools with the same schemas (they will fail at runtime without real credentials, which is fine for scanning)
+
+  sandbox.tool("sites_list", "List all sites (properties) you have access to in Google Search Console.", {}, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sites_get", "Retrieve information about a specific site (property) in Google Search Console.", {
+    siteUrl: z.string().describe("The site URL (e.g. 'https://example.com/' or 'sc-domain:example.com')"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sites_add", "Add a site (property) to Google Search Console. Verification may still be required.", {
+    siteUrl: z.string().describe("The site URL to add (e.g. 'https://example.com/' or 'sc-domain:example.com')"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sites_delete", "Remove a site (property) from Google Search Console.", {
+    siteUrl: z.string().describe("The site URL to remove"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sitemaps_list", "List all sitemaps submitted for a site in Google Search Console.", {
+    siteUrl: z.string().describe("The site URL"),
+    sitemapIndex: z.string().optional().describe("Optional: URL of a sitemap index to list only sitemaps in that index"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sitemaps_get", "Retrieve information about a specific sitemap.", {
+    siteUrl: z.string().describe("The site URL"),
+    feedpath: z.string().describe("The URL of the sitemap (e.g. 'https://example.com/sitemap.xml')"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sitemaps_submit", "Submit a sitemap for a site to Google Search Console.", {
+    siteUrl: z.string().describe("The site URL"),
+    feedpath: z.string().describe("The URL of the sitemap to submit (e.g. 'https://example.com/sitemap.xml')"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("sitemaps_delete", "Delete a sitemap from Google Search Console.", {
+    siteUrl: z.string().describe("The site URL"),
+    feedpath: z.string().describe("The URL of the sitemap to delete"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("search_analytics_query", "Query search traffic data from Google Search Console. Returns clicks, impressions, CTR, and position data with flexible filtering and grouping.", {
+    siteUrl: z.string().describe("The site URL"),
+    startDate: z.string().describe("Start date in YYYY-MM-DD format"),
+    endDate: z.string().describe("End date in YYYY-MM-DD format"),
+    dimensions: z.array(dimensionEnum).optional().describe("Dimensions to group by"),
+    type: searchTypeEnum.optional().describe("Search type filter"),
+    dimensionFilterGroups: z.array(dimensionFilterGroupSchema).optional().describe("Filter groups to apply to the query"),
+    aggregationType: z.enum(["auto", "byPage", "byProperty", "byNewsShowcasePanel"]).optional().describe("How data is aggregated"),
+    rowLimit: z.number().min(1).max(25000).optional().describe("Maximum number of rows to return (1-25000)"),
+    startRow: z.number().min(0).optional().describe("Zero-based row offset for pagination"),
+    dataState: dataStateEnum.optional().describe("Data state filter"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("url_inspection_inspect", "Inspect a URL in Google's index.", {
+    inspectionUrl: z.string().describe("The fully-qualified URL to inspect"),
+    siteUrl: z.string().describe("The site URL (property) the inspected URL belongs to"),
+    languageCode: z.string().optional().describe("Optional BCP-47 language code"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("indexing_publish", "Notify Google about a URL update or removal via the Indexing API.", {
+    url: z.string().describe("The fully-qualified URL to notify about"),
+    type: z.enum(["URL_UPDATED", "URL_DELETED"]).describe("Notification type"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("indexing_get_metadata", "Get the latest indexing notification metadata for a URL.", {
+    url: z.string().describe("The fully-qualified URL to check notification status for"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  sandbox.tool("indexing_batch_publish", "Batch notify Google about multiple URL updates or removals via the Indexing API.", {
+    notifications: z.array(z.object({
+      url: z.string().describe("The fully-qualified URL"),
+      type: z.enum(["URL_UPDATED", "URL_DELETED"]).describe("Notification type"),
+    })).min(1).max(100).describe("Array of URL notifications (1-100 items)"),
+  }, async () => {
+    return { content: [{ type: "text" as const, text: "sandbox" }] };
+  });
+
+  return sandbox;
+}
