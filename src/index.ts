@@ -38,7 +38,19 @@ async function getAccessToken(): Promise<string> {
       });
     }
     const client = await googleAuth.getClient();
-    const token = await client.getAccessToken();
+
+    // Retry once on transient network errors (e.g. "Premature close" from
+    // keep-alive socket reuse) before failing the tool call.
+    let token;
+    try {
+      token = await client.getAccessToken();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (!/premature close/i.test(message)) throw e;
+      await new Promise((r) => setTimeout(r, 300));
+      token = await client.getAccessToken();
+    }
+
     if (!token.token) throw new Error("Failed to get service account token");
     return token.token;
   }
