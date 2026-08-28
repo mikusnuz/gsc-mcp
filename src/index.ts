@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  McpServer,
+  ResourceTemplate,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { GoogleAuth } from "google-auth-library";
+import { parseIndexingBatchResponse } from "./indexing-batch.js";
 
 // ── Config ──
 
@@ -16,6 +20,8 @@ const WEBMASTERS_BASE = "https://www.googleapis.com/webmasters/v3";
 const INSPECTION_BASE = "https://searchconsole.googleapis.com/v1";
 const INDEXING_BASE = "https://indexing.googleapis.com/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const SERVER_VERSION = "1.3.3";
+const HTTP_TIMEOUT_MS = 30_000;
 
 const SCOPES = [
   "https://www.googleapis.com/auth/webmasters",
@@ -35,6 +41,9 @@ async function getAccessToken(): Promise<string> {
       googleAuth = new GoogleAuth({
         keyFile: SERVICE_ACCOUNT_KEY_PATH,
         scopes: SCOPES,
+        clientOptions: {
+          transporterOptions: { timeout: HTTP_TIMEOUT_MS },
+        },
       });
     }
     const client = await googleAuth.getClient();
@@ -43,12 +52,18 @@ async function getAccessToken(): Promise<string> {
     // keep-alive socket reuse) before failing the tool call.
     let token;
     try {
-      token = await client.getAccessToken();
+      token = await withTimeout(
+        client.getAccessToken(),
+        "Service account token request",
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (!/premature close/i.test(message)) throw e;
       await new Promise((r) => setTimeout(r, 300));
-      token = await client.getAccessToken();
+      token = await withTimeout(
+        client.getAccessToken(),
+        "Service account token retry",
+      );
     }
 
     if (!token.token) throw new Error("Failed to get service account token");
@@ -78,6 +93,7 @@ async function getAccessToken(): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -99,6 +115,23 @@ async function getAccessToken(): Promise<string> {
 
 // ── Helpers ──
 
+async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error(`${label} timed out after ${HTTP_TIMEOUT_MS}ms`)),
+          HTTP_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 function encodeSiteUrl(siteUrl: string): string {
   return encodeURIComponent(siteUrl);
 }
@@ -113,7 +146,11 @@ async function apiCall(
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(url, {
+    ...options,
+    headers,
+    signal: options.signal || AbortSignal.timeout(HTTP_TIMEOUT_MS),
+  });
   const body = await res.text();
   return { ok: res.ok, status: res.status, body };
 }
@@ -137,7 +174,7 @@ function errorResult(e: unknown) {
 
 const server = new McpServer({
   name: "gsc-mcp",
-  version: "1.3.0",
+  version: SERVER_VERSION,
 });
 
 // ════════════════════════════════════════════
@@ -504,7 +541,7 @@ server.tool(
 // ── url_inspection_inspect ──
 server.tool(
   "url_inspection_inspect",
-  "Inspect a URL in Google's index. Returns indexing status, crawl info, rich results, AMP status, and mobile usability for a specific URL.",
+  "Inspect a URL in Google's index. Returns the current URL Inspection API result, including indexing status, crawl info, rich results, and AMP status. The deprecated mobileUsabilityResult field may be absent.",
   {
     inspectionUrl: z
       .string()
@@ -545,18 +582,37 @@ server.tool(
 // INDEXING API
 // ════════════════════════════════════════════
 
+const eligibleIndexingContentTypeEnum = z.enum([
+  "JobPosting",
+  "BroadcastEvent",
+]);
+
+function assertIndexingEligibility(
+  contentType: "JobPosting" | "BroadcastEvent",
+): void {
+  if (contentType !== "JobPosting" && contentType !== "BroadcastEvent") {
+    throw new Error(
+      "Google Indexing API supports only JobPosting pages and livestream pages with BroadcastEvent embedded in VideoObject.",
+    );
+  }
+}
+
 // ── indexing_publish ──
 server.tool(
   "indexing_publish",
-  "Notify Google about a URL update or removal via the Indexing API. Use URL_UPDATED when a page is created or updated, URL_DELETED when a page is removed.",
+  "Notify Google about an eligible URL update or removal via the Indexing API. Google supports only JobPosting pages and livestream pages with BroadcastEvent embedded in VideoObject; this notification does not guarantee indexing.",
   {
-    url: z.string().describe("The fully-qualified URL to notify about"),
+    url: z.string().url().describe("The fully-qualified URL to notify about"),
+    contentType: eligibleIndexingContentTypeEnum.describe(
+      "Eligible structured-data type on the page: JobPosting, or BroadcastEvent embedded in VideoObject",
+    ),
     type: z
       .enum(["URL_UPDATED", "URL_DELETED"])
       .describe("Notification type: URL_UPDATED or URL_DELETED"),
   },
-  async ({ url, type }) => {
+  async ({ url, contentType, type }) => {
     try {
+      assertIndexingEligibility(contentType);
       const result = await apiCall(
         `${INDEXING_BASE}/urlNotifications:publish`,
         {
@@ -575,14 +631,19 @@ server.tool(
 // ── indexing_get_metadata ──
 server.tool(
   "indexing_get_metadata",
-  "Get the latest indexing notification metadata for a URL. Returns the latest URL_UPDATED and URL_DELETED notification timestamps.",
+  "Get the latest Indexing API notification metadata for an eligible JobPosting or BroadcastEvent URL. This reports notification history, not whether Google indexed the URL.",
   {
     url: z
       .string()
+      .url()
       .describe("The fully-qualified URL to check notification status for"),
+    contentType: eligibleIndexingContentTypeEnum.describe(
+      "Eligible structured-data type on the page: JobPosting, or BroadcastEvent embedded in VideoObject",
+    ),
   },
-  async ({ url }) => {
+  async ({ url, contentType }) => {
     try {
+      assertIndexingEligibility(contentType);
       const result = await apiCall(
         `${INDEXING_BASE}/urlNotifications/metadata?url=${encodeURIComponent(url)}`,
         { method: "GET" },
@@ -597,12 +658,15 @@ server.tool(
 // ── indexing_batch_publish ──
 server.tool(
   "indexing_batch_publish",
-  "Batch notify Google about multiple URL updates or removals via the Indexing API. Combines up to 100 notifications into a single HTTP request for efficiency.",
+  "Batch notify Google about up to 100 eligible JobPosting or BroadcastEvent URL updates/removals. Each embedded response is checked independently; a successful notification does not guarantee indexing.",
   {
     notifications: z
       .array(
         z.object({
-          url: z.string().describe("The fully-qualified URL"),
+          url: z.string().url().describe("The fully-qualified URL"),
+          contentType: eligibleIndexingContentTypeEnum.describe(
+            "Eligible page type: JobPosting, or BroadcastEvent embedded in VideoObject",
+          ),
           type: z
             .enum(["URL_UPDATED", "URL_DELETED"])
             .describe("Notification type: URL_UPDATED or URL_DELETED"),
@@ -611,11 +675,14 @@ server.tool(
       .min(1)
       .max(100)
       .describe(
-        "Array of URL notifications (1-100 items). Each item has a url and type.",
+        "Array of eligible URL notifications (1-100 items). Each item has url, contentType, and type.",
       ),
   },
   async ({ notifications }) => {
     try {
+      notifications.forEach(({ contentType }) =>
+        assertIndexingEligibility(contentType),
+      );
       const token = await getAccessToken();
       const boundary = `batch_gsc_mcp_${Date.now()}`;
 
@@ -645,19 +712,45 @@ server.tool(
           "Content-Type": `multipart/mixed; boundary=${boundary}`,
         },
         body: batchBody,
+        signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
       });
 
       const responseText = await res.text();
+      if (!res.ok) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Batch request failed (${res.status}):\n${responseText}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const results = parseIndexingBatchResponse(
+        responseText,
+        res.headers.get("content-type") || "",
+        notifications,
+      );
+      const failed = results.filter((result) => !result.ok).length;
       return {
         content: [
           {
             type: "text" as const,
-            text: res.ok
-              ? `Batch published ${notifications.length} URL(s) successfully.\n\n${responseText}`
-              : `Batch request failed (${res.status}):\n${responseText}`,
+            text: JSON.stringify(
+              {
+                total: results.length,
+                succeeded: results.length - failed,
+                failed,
+                results,
+              },
+              null,
+              2,
+            ),
           },
         ],
-        isError: !res.ok,
+        isError: failed > 0,
       };
     } catch (e) {
       return errorResult(e);
@@ -710,27 +803,30 @@ server.prompt(
 
 server.prompt(
   "index_url",
-  "Submit a URL to Google for indexing and verify its current index status.",
+  "Notify Google about an eligible JobPosting or BroadcastEvent URL and inspect its current index status.",
   {
     url: z.string().describe("The fully-qualified URL to index"),
     siteUrl: z
       .string()
       .describe("The site URL this page belongs to"),
+    contentType: eligibleIndexingContentTypeEnum.describe(
+      "Eligible page type: JobPosting, or BroadcastEvent embedded in VideoObject",
+    ),
   },
-  ({ url, siteUrl }) => ({
+  ({ url, siteUrl, contentType }) => ({
     messages: [
       {
         role: "user" as const,
         content: {
           type: "text" as const,
           text: [
-            `Index the URL ${url} (site: ${siteUrl}). Follow these steps:`,
+            `Notify Google about the eligible ${contentType} URL ${url} (site: ${siteUrl}). Follow these steps:`,
             "",
             "1. Use url_inspection_inspect to check the current index status",
-            "2. Use indexing_publish with type URL_UPDATED to request indexing",
-            "3. Use indexing_get_metadata to confirm the notification was received",
+            `2. Use indexing_publish with type URL_UPDATED and contentType ${contentType}`,
+            `3. Use indexing_get_metadata with contentType ${contentType} to confirm the notification was received`,
             "",
-            "Report the results including current index status and notification confirmation.",
+            "Report current index status and notification confirmation separately. Explain that notification acceptance does not guarantee indexing.",
           ].join("\n"),
         },
       },
@@ -768,15 +864,17 @@ server.resource(
 
 server.resource(
   "sitemaps",
-  "gsc://sitemaps/{siteUrl}",
+  new ResourceTemplate("gsc://sitemaps/{siteUrl}", { list: undefined }),
   {
     description: "List of all sitemaps for a specific site",
     mimeType: "application/json",
   },
-  async (uri) => {
-    const siteUrl = decodeURIComponent(
-      uri.pathname.replace(/^\/\/sitemaps\//, ""),
-    );
+  async (uri, variables) => {
+    const rawSiteUrl = variables.siteUrl;
+    if (Array.isArray(rawSiteUrl)) {
+      throw new Error("The sitemap resource expects exactly one siteUrl");
+    }
+    const siteUrl = decodeURIComponent(rawSiteUrl);
     const result = await apiCall(
       `${WEBMASTERS_BASE}/sites/${encodeSiteUrl(siteUrl)}/sitemaps`,
       { method: "GET" },
@@ -810,7 +908,7 @@ main().catch((err) => {
 export function createSandboxServer() {
   const sandbox = new McpServer({
     name: "gsc-mcp",
-    version: "1.3.0",
+    version: SERVER_VERSION,
   });
 
   // Re-register all tools with the same schemas (they will fail at runtime without real credentials, which is fine for scanning)
@@ -880,7 +978,7 @@ export function createSandboxServer() {
     return { content: [{ type: "text" as const, text: "sandbox" }] };
   });
 
-  sandbox.tool("url_inspection_inspect", "Inspect a URL in Google's index.", {
+  sandbox.tool("url_inspection_inspect", "Inspect a URL in Google's index. The deprecated mobile usability field may be absent.", {
     inspectionUrl: z.string().describe("The fully-qualified URL to inspect"),
     siteUrl: z.string().describe("The site URL (property) the inspected URL belongs to"),
     languageCode: z.string().optional().describe("Optional BCP-47 language code"),
@@ -888,22 +986,25 @@ export function createSandboxServer() {
     return { content: [{ type: "text" as const, text: "sandbox" }] };
   });
 
-  sandbox.tool("indexing_publish", "Notify Google about a URL update or removal via the Indexing API.", {
-    url: z.string().describe("The fully-qualified URL to notify about"),
+  sandbox.tool("indexing_publish", "Notify Google about an eligible JobPosting or BroadcastEvent URL update or removal via the Indexing API.", {
+    url: z.string().url().describe("The fully-qualified URL to notify about"),
+    contentType: eligibleIndexingContentTypeEnum.describe("Eligible structured-data type"),
     type: z.enum(["URL_UPDATED", "URL_DELETED"]).describe("Notification type"),
   }, async () => {
     return { content: [{ type: "text" as const, text: "sandbox" }] };
   });
 
   sandbox.tool("indexing_get_metadata", "Get the latest indexing notification metadata for a URL.", {
-    url: z.string().describe("The fully-qualified URL to check notification status for"),
+    url: z.string().url().describe("The fully-qualified URL to check notification status for"),
+    contentType: eligibleIndexingContentTypeEnum.describe("Eligible structured-data type"),
   }, async () => {
     return { content: [{ type: "text" as const, text: "sandbox" }] };
   });
 
-  sandbox.tool("indexing_batch_publish", "Batch notify Google about multiple URL updates or removals via the Indexing API.", {
+  sandbox.tool("indexing_batch_publish", "Batch notify Google about eligible JobPosting or BroadcastEvent URL updates or removals via the Indexing API.", {
     notifications: z.array(z.object({
-      url: z.string().describe("The fully-qualified URL"),
+      url: z.string().url().describe("The fully-qualified URL"),
+      contentType: eligibleIndexingContentTypeEnum.describe("Eligible structured-data type"),
       type: z.enum(["URL_UPDATED", "URL_DELETED"]).describe("Notification type"),
     })).min(1).max(100).describe("Array of URL notifications (1-100 items)"),
   }, async () => {

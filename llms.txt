@@ -20,12 +20,14 @@
 - search_analytics_query: Query search performance data (clicks, impressions, CTR, position) with filtering, grouping, and hourly dimension support
 
 ### URL Inspection
-- url_inspection_inspect: Inspect a URL's index status, crawl info, rich results, AMP, and mobile usability
+- url_inspection_inspect: Inspect index status, crawl info, rich results, and AMP; deprecated mobile usability may be absent
 
 ### Indexing API
-- indexing_publish: Notify Google about URL updates or removals
-- indexing_get_metadata: Get latest notification status for a URL
-- indexing_batch_publish: Batch notify Google about up to 100 URL updates/removals in a single request
+- indexing_publish: Notify Google about an eligible JobPosting or BroadcastEvent URL update/removal; requires contentType
+- indexing_get_metadata: Get latest notification metadata; requires contentType (not actual index status)
+- indexing_batch_publish: Batch notify up to 100 eligible URLs and return every embedded HTTP status
+
+Indexing API restriction: only JobPosting pages and livestream pages with BroadcastEvent embedded in VideoObject are eligible. Notification success does not guarantee indexing.
 
 ## Install
 
@@ -47,7 +49,7 @@ Required OAuth2 scopes:
 ### Option B: Service Account
 - GSC_SERVICE_ACCOUNT_KEY_PATH — path to service account JSON key file
 
-The service account must be added as an owner/user in Google Search Console.
+Search Console calls need sufficient property access. Indexing API calls require the service account to be a delegated owner; user access is insufficient.
 
 ## MCP Config
 

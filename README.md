@@ -13,12 +13,12 @@ MCP server for **Google Search Console API** and **Google Indexing API** — ful
 | Task | Tool |
 |------|------|
 | "Check which queries my site ranks for" | `search_analytics_query` |
-| "Submit a URL for indexing" | `indexing_publish` |
+| "Notify Google about an eligible job posting or livestream URL" | `indexing_publish` |
 | "Find pages with indexing errors" | `url_inspection_inspect` |
 | "Get search performance data for the last 30 days" | `search_analytics_query` |
 | "Compare click-through rates between mobile and desktop" | `search_analytics_query` (group by `device`) |
 | "Submit my sitemap to Google" | `sitemaps_submit` |
-| "Batch submit URLs for indexing" | `indexing_batch_publish` |
+| "Batch notify eligible job posting/livestream URLs" | `indexing_batch_publish` |
 
 > **For AI agents:** See [`llms.txt`](llms.txt) for a machine-readable summary. Copy [`templates/CLAUDE.md`](templates/CLAUDE.md) or [`templates/AGENTS.md`](templates/AGENTS.md) into your project to teach your agent about this MCP.
 
@@ -50,14 +50,22 @@ Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server
 ### URL Inspection
 | Tool | Description |
 |------|-------------|
-| `url_inspection_inspect` | Inspect a URL's index status, crawl info, rich results, AMP, and mobile usability |
+| `url_inspection_inspect` | Inspect a URL's index status, crawl info, rich results, and AMP (the deprecated mobile-usability field may be absent) |
 
 ### Indexing API
 | Tool | Description |
 |------|-------------|
-| `indexing_publish` | Notify Google about URL updates or removals |
-| `indexing_get_metadata` | Get latest notification status for a URL |
-| `indexing_batch_publish` | Batch notify Google about up to 100 URL updates/removals in a single request |
+| `indexing_publish` | Notify Google about an eligible `JobPosting` or `BroadcastEvent` URL update/removal |
+| `indexing_get_metadata` | Get latest notification metadata for an eligible URL (requires `contentType`; not index status) |
+| `indexing_batch_publish` | Batch notify up to 100 eligible URLs and report every embedded request status |
+
+> **Indexing API eligibility:** Google supports this API only for pages with
+> `JobPosting` structured data or livestream pages with `BroadcastEvent`
+> embedded in a `VideoObject`. The tools require `contentType` so callers must
+> identify which supported type applies. A successful API response confirms
+> receipt of the notification; it does not guarantee that Google indexed the
+> URL. Use `url_inspection_inspect` to check index status. See Google's
+> [Indexing API usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
 ## Authentication
 
@@ -101,7 +109,10 @@ Required OAuth2 scopes:
 }
 ```
 
-The service account must be added as an owner or user in Google Search Console for each site.
+For Search Console read/write tools, add the service account as an owner or user
+with sufficient permission. For **Indexing API** tools, Google requires the
+service account to be added as a **delegated owner** of the property; user-level
+access is not sufficient.
 
 ## Setup Guide
 

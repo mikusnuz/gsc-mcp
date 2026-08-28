@@ -36,14 +36,21 @@
 ### URL 검사
 | Tool | 설명 |
 |------|------|
-| `url_inspection_inspect` | URL의 색인 상태, 크롤 정보, 리치 결과, AMP, 모바일 사용성 검사 |
+| `url_inspection_inspect` | URL의 색인 상태, 크롤 정보, 리치 결과, AMP 검사(지원 중단된 모바일 사용성 필드는 없을 수 있음) |
 
 ### Indexing API
 | Tool | 설명 |
 |------|------|
-| `indexing_publish` | URL 업데이트 또는 제거에 대해 Google에 알림 |
-| `indexing_get_metadata` | URL의 최신 알림 상태 조회 |
-| `indexing_batch_publish` | 최대 100개의 URL 업데이트/제거를 단일 요청으로 일괄 알림 |
+| `indexing_publish` | 지원 대상 `JobPosting` 또는 `BroadcastEvent` URL의 업데이트/제거 알림 |
+| `indexing_get_metadata` | 지원 대상 URL의 최신 알림 메타데이터 조회(`contentType` 필수, 색인 상태가 아님) |
+| `indexing_batch_publish` | 지원 대상 URL 최대 100개를 알리고 각 하위 요청 상태를 개별 보고 |
+
+> **Indexing API 지원 대상:** Google은 `JobPosting` 구조화 데이터가 있는
+> 페이지 또는 `VideoObject` 안에 `BroadcastEvent`가 포함된 실시간 스트림
+> 페이지만 지원합니다. 도구 호출 시 해당 유형을 `contentType`으로 반드시
+> 지정해야 합니다. API 성공 응답은 알림 접수만 뜻하며 실제 색인을 보장하지
+> 않습니다. 실제 색인 상태는 `url_inspection_inspect`로 확인하세요. 자세한
+> 내용은 Google의 [Indexing API 사용 가이드](https://developers.google.com/search/apis/indexing-api/v3/using-api)를 참고하세요.
 
 ## 인증
 
@@ -87,7 +94,10 @@
 }
 ```
 
-Service Account는 각 사이트에 대해 Google Search Console에 소유자 또는 사용자로 추가되어야 합니다.
+Search Console 조회/관리 도구는 필요한 권한을 가진 소유자 또는 사용자로
+Service Account를 추가하면 됩니다. **Indexing API** 도구를 사용하려면
+Service Account가 해당 속성의 **위임된 소유자**여야 하며 사용자 권한만으로는
+충분하지 않습니다.
 
 ## 설정 가이드
 
