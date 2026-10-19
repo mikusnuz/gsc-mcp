@@ -8,6 +8,8 @@
 
 **Google Search Console API**와 **Google Indexing API**를 위한 MCP 서버 — 전체 API 커버리지 지원.
 
+MCP SDK의 런타임 의존성에 맞춰 Node.js 20 이상이 필요합니다.
+
 다른 `searchAnalytics.query`만 래핑하는 GSC MCP 서버와 달리, 이 서버는 Google Search Console과 Indexing API의 **모든 엔드포인트**를 노출합니다.
 
 ## 도구 (13개)

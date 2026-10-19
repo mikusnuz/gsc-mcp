@@ -8,6 +8,8 @@
 
 MCP server for **Google Search Console API** and **Google Indexing API** — full API coverage.
 
+Requires Node.js 20 or newer, matching the MCP SDK's installed runtime dependencies.
+
 ## When to Use
 
 | Task | Tool |

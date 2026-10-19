@@ -21,7 +21,7 @@ const WEBMASTERS_BASE = "https://www.googleapis.com/webmasters/v3";
 const INSPECTION_BASE = "https://searchconsole.googleapis.com/v1";
 const INDEXING_BASE = "https://indexing.googleapis.com/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const SERVER_VERSION = "1.3.5";
+const SERVER_VERSION = "1.3.6";
 const HTTP_TIMEOUT_MS = 30_000;
 
 const SCOPES = [
