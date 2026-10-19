@@ -41,4 +41,4 @@ Use these MCP tools instead of calling Google APIs directly:
 - Always specify `siteUrl` in the format Google expects (e.g., `https://example.com/` or `sc-domain:example.com`).
 - Date ranges in `search_analytics_query` use `YYYY-MM-DD` format.
 - The Indexing API supports only JobPosting pages and livestream pages with BroadcastEvent embedded in VideoObject. Acceptance does not guarantee indexing.
-- The indexing API has a daily quota — use batch operations when notifying multiple eligible URLs.
+- Indexing API quotas count each URL, including every item in a batch. Batches reduce connections, not quota usage. Default publish quota is 200/day/project, resetting at midnight Pacific Time; verify the project's actual limit.

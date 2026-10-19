@@ -67,6 +67,15 @@ Unlike other GSC MCP servers that only wrap `searchAnalytics.query`, this server
 > URL. Use `url_inspection_inspect` to check index status. See Google's
 > [Indexing API usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
+### Indexing API quotas
+
+Google's default per-project limits are 200 publish requests per day, 180
+metadata requests per minute, and 380 requests per minute across endpoints.
+The daily limit resets at midnight Pacific Time. A batch of 100 URLs still
+consumes 100 requests; batching reduces connections, not quota usage. Check
+your project's actual quota before sending notifications. See the official
+[quota reference](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
+
 ## Authentication
 
 Two authentication methods are supported:

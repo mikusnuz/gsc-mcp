@@ -52,6 +52,14 @@
 > 않습니다. 실제 색인 상태는 `url_inspection_inspect`로 확인하세요. 자세한
 > 내용은 Google의 [Indexing API 사용 가이드](https://developers.google.com/search/apis/indexing-api/v3/using-api)를 참고하세요.
 
+### Indexing API 할당량
+
+Google의 프로젝트별 기본 한도는 알림 발행 하루 200회, 메타데이터 조회 분당
+180회, 전체 엔드포인트 분당 380회입니다. 일일 한도는 태평양 시간 자정에
+초기화됩니다. URL 100개를 배치로 보내도 100회로 계산되며, 배치는 연결 수만
+줄입니다. 알림 전에 프로젝트의 실제 한도를 확인하세요.
+[공식 할당량 문서](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing)
+
 ## 인증
 
 두 가지 인증 방법을 지원합니다.

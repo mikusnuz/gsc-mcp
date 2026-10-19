@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { GoogleAuth } from "google-auth-library";
 import { parseIndexingBatchResponse } from "./indexing-batch.js";
+import { getServiceAccountToken, withTimeout } from "./auth.js";
 
 // ── Config ──
 
@@ -20,7 +21,7 @@ const WEBMASTERS_BASE = "https://www.googleapis.com/webmasters/v3";
 const INSPECTION_BASE = "https://searchconsole.googleapis.com/v1";
 const INDEXING_BASE = "https://indexing.googleapis.com/v3";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const SERVER_VERSION = "1.3.4";
+const SERVER_VERSION = "1.3.5";
 const HTTP_TIMEOUT_MS = 30_000;
 
 const SCOPES = [
@@ -46,28 +47,8 @@ async function getAccessToken(): Promise<string> {
         },
       });
     }
-    const client = await googleAuth.getClient();
-
-    // Retry once on transient network errors (e.g. "Premature close" from
-    // keep-alive socket reuse) before failing the tool call.
-    let token;
-    try {
-      token = await withTimeout(
-        client.getAccessToken(),
-        "Service account token request",
-      );
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (!/premature close/i.test(message)) throw e;
-      await new Promise((r) => setTimeout(r, 300));
-      token = await withTimeout(
-        client.getAccessToken(),
-        "Service account token retry",
-      );
-    }
-
-    if (!token.token) throw new Error("Failed to get service account token");
-    return token.token;
+    const client = await withTimeout(googleAuth.getClient(), "Service account client initialization", HTTP_TIMEOUT_MS);
+    return getServiceAccountToken(client, { timeoutMs: HTTP_TIMEOUT_MS });
   }
 
   // OAuth2 refresh token auth
@@ -114,23 +95,6 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ── Helpers ──
-
-async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(
-          () => reject(new Error(`${label} timed out after ${HTTP_TIMEOUT_MS}ms`)),
-          HTTP_TIMEOUT_MS,
-        );
-      }),
-    ]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
-}
 
 function encodeSiteUrl(siteUrl: string): string {
   return encodeURIComponent(siteUrl);

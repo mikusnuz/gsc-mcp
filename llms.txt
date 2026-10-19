@@ -26,6 +26,7 @@
 - indexing_publish: Notify Google about an eligible JobPosting or BroadcastEvent URL update/removal; requires contentType
 - indexing_get_metadata: Get latest notification metadata; requires contentType (not actual index status)
 - indexing_batch_publish: Batch notify up to 100 eligible URLs and return every embedded HTTP status
+- Batching does not reduce quota use: each URL counts. Default project quotas are 200 publishes/day (reset midnight Pacific), 180 metadata reads/minute, 380 total requests/minute. Verify actual project limits: https://developers.google.com/search/apis/indexing-api/v3/quota-pricing
 
 Indexing API restriction: only JobPosting pages and livestream pages with BroadcastEvent embedded in VideoObject are eligible. Notification success does not guarantee indexing.
 
